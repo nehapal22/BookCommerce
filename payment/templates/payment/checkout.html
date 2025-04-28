@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Order Summary -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Order Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" 
+                                                 class="img-fluid rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                                            <div class="ms-2">
+                                                <small>{{ item.product.name }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>₹{{ item.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>₹{{ total }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <span>₹{{ shipping }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>₹{{ grand_total }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Billing Information Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Billing Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Billing Address</h5>
+                        <p class="mb-1">{{ billing_info.billing_full_name }}</p>
+                        <p class="mb-1">{{ billing_info.billing_email }}</p>
+                        <p class="mb-1">{{ billing_info.billing_address1 }}</p>
+                        {% if billing_info.billing_address2 %}
+                        <p class="mb-1">{{ billing_info.billing_address2 }}</p>
+                        {% endif %}
+                        <p class="mb-1">{{ billing_info.billing_city }}, {{ billing_info.billing_state }} {{ billing_info.billing_zip_code }}</p>
+                        <p class="mb-1">{{ billing_info.billing_country }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Information Summary -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Payment Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Card Details</h5>
+                        <p class="mb-1">Card Name: {{ payment_info.card_name }}</p>
+                        <p class="mb-1">Card Number: **** **** **** {{ payment_info.card_number|slice:"-4:" }}</p>
+                        <p class="mb-1">Expiry: {{ payment_info.card_expiry }}</p>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <form method="post" action="{% url 'payment:process_payment' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100">Place Order</button>
+                        </form>
+                        <a href="{% url 'payment:billing_info' %}" class="btn btn-outline-secondary w-100">Edit Billing Information</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'base.html'%}
+
+{% block content %}
+<!-- Hero Section -->
+<header class="py-5" style="background: linear-gradient(135deg, var(--primary-color) 0%, #3a56ff 100%);">
+    <div class="container px-4 px-lg-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">About Our Book Store</h1>
+            <p class="lead fw-normal">Discover the story behind our passion for books</p>
+        </div>
+    </div>
+</header>
+
+<!-- Mission Section -->
+<section class="py-5">
+    <div class="container px-4 px-lg-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="fw-bolder mb-4" style="color: var(--text-primary);">Our Mission</h2>
+                <p class="lead mb-4" style="color: var(--text-secondary);">To provide book lovers with a curated collection of quality books at affordable prices, fostering a love for reading and learning.</p>
+                <div class="d-flex align-items-center mb-4">
+                    <div>
+                        <h5 class="mb-1" style="color: var(--text-primary);">Curated Selection</h5>
+                        <p class="mb-0" style="color: var(--text-secondary);">Carefully selected books for every reader</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center mb-4">
+                    <div>
+                        <h5 class="mb-1" style="color: var(--text-primary);">Fast Delivery</h5>
+                        <p class="mb-0" style="color: var(--text-secondary);">Quick and reliable shipping service</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div>
+                        <h5 class="mb-1" style="color: var(--text-primary);">Best Prices</h5>
+                        <p class="mb-0" style="color: var(--text-secondary);">Competitive prices with regular discounts</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80" 
+                     class="img-fluid rounded shadow" alt="Book Store Interior">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values Section -->
+<section class="py-5">
+    <div class="container px-4 px-lg-5">
+        <h2 class="text-center fw-bolder mb-5" style="color: var(--text-primary);">Our Values</h2>
+        <div class="row gx-4 gx-lg-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="bi bi-heart-fill" style="font-size: 2rem; color: var(--danger-color);"></i>
+                        </div>
+                        <h5 class="card-title" style="color: var(--text-primary);">Passion for Books</h5>
+                        <p class="card-text" style="color: var(--text-secondary);">We share your love for reading and are committed to bringing you the best books.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-check" style="font-size: 2rem; color: var(--primary-color);"></i>
+                        </div>
+                        <h5 class="card-title" style="color: var(--text-primary);">Quality Assurance</h5>
+                        <p class="card-text" style="color: var(--text-secondary);">Every book in our collection meets our high standards of quality and condition.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="bi bi-people-fill" style="font-size: 2rem; color: var(--success-color);"></i>
+                        </div>
+                        <h5 class="card-title" style="color: var(--text-primary);">Customer Focus</h5>
+                        <p class="card-text" style="color: var(--text-secondary);">Your satisfaction is our priority. We're here to help you find your next favorite book.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

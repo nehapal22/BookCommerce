@@ -1,0 +1,103 @@
+{% extends 'base.html'%}
+
+{% block content %}
+<!-- Hero Section -->
+<header class="py-5" style="background-color: #f5f5f5;">
+    <div class="container px-4 px-lg-5">
+        <div class="text-center">
+            <h1 class="display-4 fw-bolder" style="color: #4a4a4a;">Search Products</h1>
+            <p class="lead fw-normal" style="color: #6c757d;">Find what you're looking for</p>
+        </div>
+    </div>
+</header>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{% url 'store:search' %}">
+                        {% csrf_token %}
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control form-control-lg" 
+                                   placeholder="Search products..." 
+                                   name="searched" 
+                                   value="{{ searched|default:'' }}"
+                                   required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search me-2"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if products %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Search Results for "{{ searched }}"</h3>
+        </div>
+    </div>
+    <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+        {% for product in products %}
+        <div class="col mb-5">
+            <div class="card h-100 shadow-sm" style="border: 1px solid #e0e0e0;">
+                {% if product.is_sale %}
+                <div class="badge position-absolute" style="top: 0.5rem; right: 0.5rem; background-color: #ffd8d8; color: #4a4a4a;">
+                    SALE
+                </div>
+                {% endif %}
+                
+                <img class="card-img-top p-3" src="{{ product.image.url }}" alt="{{ product.name }}" 
+                     style="height: 200px; object-fit: contain;">
+                
+                <div class="card-body p-4">
+                    <div class="text-center">
+                        <h5 class="fw-bolder mb-2" style="color: #4a4a4a;">{{ product.name }}</h5>
+                        
+                        <div class="d-flex justify-content-center align-items-center">
+                            {% if product.is_sale %}
+                            <div class="text-muted me-2">
+                                <strike>₹{{ product.price }}</strike>
+                            </div>
+                            <div class="h5 mb-0" style="color: #ff6b6b;">₹{{ product.sale_price }}</div>
+                            {% else %}
+                            <div class="h5 mb-0" style="color: #4a4a4a;">₹{{ product.price }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+                    <div class="text-center">
+                        <a class="btn mt-auto" href="{% url 'store:product' product.id %}" 
+                           style="background-color: #f5f5f5; color: #4a4a4a; border: 1px solid #e0e0e0;">
+                            <i class="bi bi-eye me-2"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif searched %}
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No products found matching "{{ searched }}"
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+// ... existing code ...
+</script>
+{% endblock %}

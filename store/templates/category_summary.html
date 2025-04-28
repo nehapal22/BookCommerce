@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4 fw-bold" style="color: #4a4a4a;">Shop by Category</h1>
+            <p class="lead fs-4 text-muted">Browse our wide selection of products by category</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for category in categories %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm" style="border: 1px solid #e0e0e0;">
+                <div class="card-body p-4">
+                    <div class="text-center">
+                        <h3 class="fw-bolder mb-3" style="color: #4a4a4a;">{{ category.name }}</h3>
+                        {% if category.description %}
+                        <p class="text-muted mb-4">{{ category.description }}</p>
+                        {% endif %}
+                        <a href="{% url 'store:category' category.slug %}" class="btn btn-outline-primary">
+                            View Products
+                            <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Order Summary -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Processing order</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" 
+                                                 class="img-fluid rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                                            <div class="ms-2">
+                                                <small>{{ item.product.name }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>₹{{ item.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>₹{{ total }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <span>₹{{ shipping }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>₹{{ grand_total }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Billing Address Form -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Billing Address</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'payment:process_billing_info' %}" id="billing-form">
+                        {% csrf_token %}
+                        
+                        {% if saved_addresses %}
+                        <div class="mb-4">
+                            <h5>Use Saved Address</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="address_choice" id="new_address" value="new" checked>
+                                <label class="form-check-label" for="new_address">
+                                    Enter new address
+                                </label>
+                            </div>
+                            {% for address in saved_addresses %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="address_choice" id="address_{{ address.id }}" value="{{ address.id }}">
+                                <label class="form-check-label" for="address_{{ address.id }}">
+                                    {{ address.shipping_full_name }} - {{ address.shipping_address1 }}, {{ address.shipping_city }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <hr>
+                        {% endif %}
+                        
+                        <div id="new_address_form">
+                            <div class="mb-3">
+                                <label for="billing_full_name" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="billing_full_name" name="billing_full_name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="billing_email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="billing_email" name="billing_email" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="billing_address1" class="form-label">Billing Address Line 1</label>
+                                <input type="text" class="form-control" id="billing_address1" name="billing_address1" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="billing_address2" class="form-label">Billing Address Line 2</label>
+                                <input type="text" class="form-control" id="billing_address2" name="billing_address2">
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="billing_city" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="billing_city" name="billing_city" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="billing_state" class="form-label">State/Province</label>
+                                    <input type="text" class="form-control" id="billing_state" name="billing_state" required>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="billing_zipcode" class="form-label">ZIP/Postal Code</label>
+                                    <input type="text" class="form-control" id="billing_zipcode" name="billing_zipcode" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="billing_country" class="form-label">Country</label>
+                                    <input type="text" class="form-control" id="billing_country" name="billing_country" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="save_address" name="save_address">
+                                    <label class="form-check-label" for="save_address">
+                                        Save this address for future use
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Payment Information -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Payment Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        {{ payment_form.card_name }}
+                    </div>
+                    <div class="mb-4">
+                        {{ payment_form.card_number }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            {{ payment_form.card_expiry }}
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            {{ payment_form.card_cvv }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" form="billing-form" class="btn btn-primary">Continue to Checkout</button>
+                        <a href="{% url 'cart:cart_summary' %}" class="btn btn-outline-secondary">Back to Cart</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addressChoiceRadios = document.querySelectorAll('input[name="address_choice"]');
+    const newAddressForm = document.getElementById('new_address_form');
+    const saveAddressCheckbox = document.getElementById('save_address');
+    
+    addressChoiceRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'new') {
+                newAddressForm.style.display = 'block';
+                newAddressForm.querySelectorAll('input[required]').forEach(input => {
+                    input.required = true;
+                });
+                saveAddressCheckbox.parentElement.style.display = 'block';
+            } else {
+                newAddressForm.style.display = 'none';
+                newAddressForm.querySelectorAll('input[required]').forEach(input => {
+                    input.required = false;
+                });
+                saveAddressCheckbox.parentElement.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

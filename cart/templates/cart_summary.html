@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">Shopping Cart</h2>
+        <a href="{% url 'store:home' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-2"></i>Continue Shopping
+        </a>
+    </div>
+    
+    {% if cart_items %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr id="cart-item-{{ item.product.id }}" class="align-middle">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" 
+                                 class="img-fluid rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                            <div class="ms-3">
+                                <h6 class="mb-0">{{ item.product.name }}</h6>
+                                {% if item.is_sale %}
+                                <span class="badge bg-danger">SALE</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if item.is_sale %}
+                        <div class="text-muted">
+                            <strike>₹{{ item.original_price }}</strike>
+                        </div>
+                        <div class="text-danger fw-bold">₹{{ item.price }}</div>
+                        {% else %}
+                        <div class="fw-bold">₹{{ item.price }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm text-center" 
+                               value="{{ item.quantity }}" min="1" style="width: 80px;"
+                               onchange="updateQuantity({{ item.product.id }}, this.value)">
+                    </td>
+                    <td class="fw-bold item-total">₹{{ item.total }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteItem({{ item.product.id }})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                    <td id="cart-total" class="fw-bold"><strong>₹{{ total }}</strong></td>
+                    <td>
+                        <a href="{% url 'payment:billing_info' %}" class="btn btn-success">
+                            <i class="bi bi-cart-check me-2"></i>Proceed to Checkout
+                        </a>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>Your cart is empty.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function updateQuantity(productId, quantity) {
+    // Ensure quantity is at least 1
+    quantity = Math.max(1, parseInt(quantity));
+    
+    $.ajax({
+        type: 'POST',
+        url: '{% url "cart:cart_update" %}',
+        data: {
+            product_id: productId,
+            product_qty: quantity,
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            action: 'post'
+        },
+        success: function(json) {
+            if (json.success) {
+                // Update the quantity input
+                $(`#cart-item-${productId} input[type="number"]`).val(json.qty);
+                
+                // Get the current price (sale or regular)
+                const priceElement = $(`#cart-item-${productId} .text-danger.fw-bold, #cart-item-${productId} .fw-bold`);
+                const price = parseFloat(priceElement.text().replace('₹', '').trim());
+                
+                // Update the total for this item
+                const itemTotal = (json.qty * price).toFixed(2);
+                $(`#cart-item-${productId} .item-total`).text('₹' + itemTotal);
+                
+                // Update the cart total
+                $('#cart-total strong').text('₹' + json.total.toFixed(2));
+                
+                // Update cart count in navbar
+                const cartQuantity = document.getElementById('cart_quantity');
+                if (cartQuantity) {
+                    cartQuantity.textContent = json.qty;
+                }
+            }
+        },
+        error: function(xhr, errmsg, err) {
+            console.log('Error updating quantity:', errmsg);
+        }
+    });
+}
+
+function deleteItem(productId) {
+    $.ajax({
+        type: 'POST',
+        url: '{% url "cart:cart_delete" %}',
+        data: {
+            product_id: productId,
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            action: 'post'
+        },
+        success: function(json) {
+            if (json.success) {
+                // Remove the item row
+                $(`#cart-item-${productId}`).remove();
+                
+                // Update cart count in navbar
+                const cartQuantity = document.getElementById('cart_quantity');
+                if (cartQuantity) {
+                    cartQuantity.textContent = parseInt(cartQuantity.textContent) - 1;
+                }
+                
+                // If no items left, show empty cart message
+                if ($('tbody tr').length === 0) {
+                    location.reload();
+                }
+            }
+        },
+        error: function(xhr, errmsg, err) {
+            console.log('Error deleting item:', errmsg);
+        }
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,46 @@
+{% extends 'base.html'%}
+
+{% block content %}
+<!-- Header-->
+<header class="py-5" style="background: linear-gradient(135deg, var(--primary-color) 0%, #3a56ff 100%);">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Login</h1>
+            <p class="lead fw-normal">Login to your account</p>
+        </div>
+    </div>
+</header>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <form method='POST' action='{% url 'store:login' %}' novalidate>
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="username" class="form-label" style="color: var(--text-primary);">Username</label>
+                            <input type="text" class="form-control" id="username" name='username' placeholder='Enter your username' required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="password" class="form-label" style="color: var(--text-primary);">Password</label>
+                            <input type="password" class="form-control" id="password" name='password' placeholder='Enter your password' required>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="mb-0" style="color: var(--text-secondary);">New to our store?</p>
+                        <a href="{% url 'store:register' %}" class="btn btn-outline-primary mt-2">
+                            <i class="bi bi-person-plus me-2"></i>Register New Account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

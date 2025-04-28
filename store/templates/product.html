@@ -1,0 +1,133 @@
+{% extends 'base.html'%}
+{% block content %}
+
+<div class="container py-5">
+    <div class="card shadow">
+        <div class="row g-0">
+          <div class="col-md-5">
+            <img src="{{product.image.url}}" 
+            class="img-fluid rounded-start h-100 object-fit-cover" 
+            alt="{{product.name}}">
+          </div>
+          <div class="col-md-7">
+            <div class="card-body p-4">
+              <h2 class="card-title mb-3" style="color: var(--text-primary);">{{product.name}}</h2>
+              
+              <div class="mb-4">
+                {% if product.is_sale %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="badge bg-danger me-2">SALE</div>
+                    <div class="text-muted">
+                        <strike class="me-2">₹{{product.price}}</strike>
+                        <span class="h4" style="color: var(--danger-color);">₹{{product.sale_price}}</span>
+                    </div>
+                </div>
+                {% else %}
+                <h4 style="color: var(--primary-color);">₹{{product.price}}</h4>
+                {% endif %}
+              </div>
+
+              <div class="card-text mb-4">
+                <h5 class="mb-3" style="color: var(--text-primary);">Product Description</h5>
+                <p class="text-muted">{{product.description}}</p>
+              </div>
+
+              <div class="d-flex gap-3">
+                <a href="{% url 'store:home' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Home
+                </a>
+                {% if user.is_authenticated %}
+                <button class="btn btn-primary" 
+                value="{{product.id}}" id="add-cart">
+                    <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                </button>
+                {% else %}
+                <a href="{% url 'store:login' %}?next={{ request.path }}" class="btn btn-primary">
+                    <i class="bi bi-cart-plus me-2"></i>Login to Add to Cart
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    {% if recommendations %}
+    <div class="mt-5">
+        <h3 class="mb-4">You May Also Like</h3>
+        <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+            {% for product in recommendations %}
+            <div class="col mb-5">
+                <div class="card h-100">
+                    {% if product.is_sale %}
+                    <div class="badge position-absolute" style="top: 0.5rem; right: 0.5rem; background-color: var(--danger-color); color: white;">
+                        SALE
+                    </div>
+                    {% endif %}
+                    
+                    <img class="card-img-top p-3" src="{{ product.image.url }}" alt="{{ product.name }}" 
+                         style="height: 200px; object-fit: contain;">
+                    
+                    <div class="card-body p-4">
+                        <div class="text-center">
+                            <h5 class="fw-bolder mb-2" style="color: var(--text-primary);">{{ product.name }}</h5>
+                            
+                            <div class="d-flex justify-content-center align-items-center">
+                                {% if product.is_sale %}
+                                <div class="text-muted me-2">
+                                    <strike>₹{{ product.price }}</strike>
+                                </div>
+                                <div class="h5 mb-0" style="color: var(--danger-color);">₹{{ product.sale_price }}</div>
+                                {% else %}
+                                <div class="h5 mb-0" style="color: var(--primary-color);">₹{{ product.price }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+                        <div class="text-center">
+                            <a class="btn btn-outline-primary mt-auto" href="{% url 'store:product' product.id %}">
+                                <i class="bi bi-eye me-2"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if user.is_authenticated %}
+<script>
+$(document).on('click', '#add-cart', function(e) {
+    e.preventDefault();
+    $.ajax({
+        type: 'POST',
+        url: '{% url "cart:cart_add" %}',
+        data: {
+            product_id: $(this).val(),
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        },
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(json) {
+            if (json.success) {
+                // Update cart count in navbar
+                const cartQuantity = document.getElementById('cart_quantity');
+                if (cartQuantity) {
+                    cartQuantity.textContent = json.cart_items_count;
+                }
+            }
+        },
+        error: function(xhr, errmsg, err) {
+            console.log('Error adding to cart:', errmsg);
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

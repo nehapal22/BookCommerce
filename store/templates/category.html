@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Category Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold" style="color: var(--text-primary);">{{ category.name }}</h1>
+            <p class="lead fs-4" style="color: var(--text-secondary);">{{ category.description }}</p>
+        </div>
+    </div>
+
+    <!-- Subcategories -->
+    {% if subcategories %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h4 mb-3" style="color: var(--text-primary);">Subcategories</h2>
+            <div class="d-flex flex-wrap gap-3">
+                {% for subcategory in subcategories %}
+                <a href="{% url 'store:category' subcategory.slug %}" 
+                   class="btn btn-outline-primary">
+                    {{ subcategory.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Products -->
+    <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+        {% for product in products %}
+        <div class="col mb-5">
+            <div class="card h-100">
+                {% if product.is_sale %}
+                <div class="badge position-absolute" style="top: 0.5rem; right: 0.5rem; background-color: var(--danger-color); color: white;">
+                    SALE
+                </div>
+                {% endif %}
+                
+                <img class="card-img-top p-3" src="{{ product.image.url }}" alt="{{ product.name }}" 
+                     style="height: 200px; object-fit: contain;">
+                
+                <div class="card-body p-4">
+                    <div class="text-center">
+                        <h5 class="fw-bolder mb-2" style="color: var(--text-primary);">{{ product.name }}</h5>
+                        
+                        <div class="d-flex justify-content-center align-items-center">
+                            {% if product.is_sale %}
+                            <div class="text-muted me-2">
+                                <strike>₹{{ product.price }}</strike>
+                            </div>
+                            <div class="h5 mb-0" style="color: var(--danger-color);">₹{{ product.sale_price }}</div>
+                            {% else %}
+                            <div class="h5 mb-0" style="color: var(--primary-color);">₹{{ product.price }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+                    <div class="text-center">
+                        <a class="btn btn-outline-primary mt-auto" href="{% url 'store:product' product.id %}">
+                            <i class="bi bi-eye me-2"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

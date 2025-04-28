@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Header-->
+<header class="py-5" style="background: linear-gradient(135deg, var(--primary-color) 0%, #3a56ff 100%);">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Payment Successful!</h1>
+            <p class="lead fw-normal">Thank you for your purchase</p>
+        </div>
+    </div>
+</header>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill" style="font-size: 4rem; color: var(--success-color);"></i>
+                    </div>
+                    <h3 class="card-title mb-4" style="color: var(--text-primary);">Your order has been placed successfully!</h3>
+                    <p class="card-text mb-4" style="color: var(--text-secondary);">
+                        We have received your payment and your order is being processed. You will receive a confirmation email shortly.
+                    </p>
+                    <div class="d-grid gap-3">
+                        <a href="{% url 'home' %}" class="btn btn-primary">
+                            <i class="bi bi-house me-2"></i>Return to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
