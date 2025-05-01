@@ -17,7 +17,21 @@ SECRET_KEY = "django-insecure-3$05ti#8gw%dmt(kn%2f2a-k!!!#=27cvr)f-&aaf59q2ouu$#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'djangotest.com',
+    'https://djangotest.com',
+    'django-ecommerce-production-81b6.up.railway.app',
+    'https://django-ecommerce-production-81b6.up.railway.app'
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'https://djangotest.com',
+    'https://django-ecommerce-production-81b6.up.railway.app'
+]
 
 
 # Application definition
@@ -58,6 +72,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.csrf",
                 "store.context_processors.categories_context",
                 'cart.context_processors.cart',
             ],
@@ -130,3 +145,15 @@ LOGOUT_REDIRECT_URL = 'store:home'
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #"ENGINE": "django.db.backends.sqlite3",
 #"NAME": BASE_DIR / "db.sqlite3",
+
+# CSRF and Session Settings
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SAMESITE = None
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+CSRF_USE_SESSIONS = False  # Use cookies for CSRF
+CSRF_COOKIE_NAME = 'csrftoken'
+SESSION_COOKIE_NAME = 'sessionid'

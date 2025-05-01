@@ -7,7 +7,7 @@ import datetime
 # Create your models here.
 
 class ShippingAddress(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='payment_shipping_address')
     shipping_full_name = models.CharField(max_length=255)
     shipping_email = models.EmailField(max_length=255)
     shipping_address1 = models.CharField(max_length=500)
@@ -65,13 +65,19 @@ class OrderItem(models.Model):
         return (self.price * self.quantity)
         
 class Payment(models.Model):
+    PAYMENT_METHOD_CHOICES = [
+        ('card', 'Card Payment'),
+        ('cod', 'Cash on Delivery'),
+    ]
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    card_name = models.CharField(max_length=100)
-    card_number = models.CharField(max_length=16)
-    card_expiry = models.CharField(max_length=5)
-    card_cvv = models.CharField(max_length=3)
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment', null=True, blank=True)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='card')
+    card_name = models.CharField(max_length=100, null=True, blank=True)
+    card_number = models.CharField(max_length=16, null=True, blank=True)
+    card_expiry = models.CharField(max_length=5, null=True, blank=True)
+    card_cvv = models.CharField(max_length=3, null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
-
+    
     def __str__(self):
-        return f"{self.card_name} - {self.card_number[-4:]}"
-        
+        return f"Payment for Order {self.order.id if self.order else 'N/A'}"

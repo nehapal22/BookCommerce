@@ -12,9 +12,11 @@ from django import forms
 from django.http import JsonResponse, Http404
 import logging
 from cart.cart import Cart
-from django.db import models
+from django.db import models, transaction
 import json
 from recommender.recommender import Recommender
+from django.views.decorators.csrf import csrf_protect
+from django.shortcuts import render, redirect
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ def product(request, pk):
         })
     except Http404:
         messages.error(request, 'Product not found')
-        return redirect('home')
+        return redirect('store:home')
 
 def home(request):
     products = Product.objects.all()
@@ -132,30 +134,39 @@ def logout_user(request):
     messages.success(request, "You have been logged out...")
     return redirect('store:home')
 
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.middleware.csrf import get_token
+
+@csrf_protect
 def register_user(request):
-    if request.user.is_authenticated:
-        messages.info(request, 'You are already logged in')
-        return redirect('home')
-        
-    if request.method == 'POST':
+    if request.method == "POST":
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            messages.success(request, f'Welcome {user.username}! Your account has been created successfully.')
-            return redirect('home')
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password1']
+            
+            # Authenticate and login the user
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, "Registration successful! Please complete your profile.")
+                return redirect('store:update_info')
+            else:
+                messages.error(request, "Authentication failed after registration.")
         else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
-    else:
-        form = SignUpForm()
-        
+            # Render the same page with form errors
+            return render(request, 'register.html', {
+                'form': form,
+                'categories': get_categories()
+            })
+    
+    # GET request or failed POST
+    form = SignUpForm()
     return render(request, 'register.html', {
         'form': form,
         'categories': get_categories()
-    })
-
+})
 @login_required
 def update_user(request):
     if request.user.is_authenticated:
@@ -170,7 +181,7 @@ def update_user(request):
                 user_form.save()
                 shipping_form.save()
                 messages.success(request, 'Your profile has been updated successfully!')
-                return redirect('home')
+                return redirect('store:home')
             else:
                 for field, errors in user_form.errors.items():
                     for error in errors:
@@ -190,7 +201,7 @@ def update_password(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Your password has been updated successfully!')
-            return redirect('home')
+            return redirect('store:home')
         else:
             for field, errors in form.errors.items():
                 for error in errors:

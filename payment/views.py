@@ -153,42 +153,93 @@ def billing_info(request):
 @login_required
 def process_billing_info(request):
     if request.method == 'POST':
+        print("Received POST request to process_billing_info")
+        print("POST data:", request.POST)
+        
+        # Get payment method
+        payment_method = request.POST.get('payment_method', 'card')
+        print("Selected payment method:", payment_method)
+        
         # Check if user selected a saved address
         address_choice = request.POST.get('address_choice')
-        if address_choice and address_choice != 'new':
-            saved_address = ShippingAddress.objects.get(id=address_choice)
-            # Store billing information in session
-            request.session['billing_info'] = {
-                'billing_full_name': saved_address.shipping_full_name,
-                'billing_email': request.user.email,
-                'billing_address1': saved_address.shipping_address1,
-                'billing_address2': saved_address.shipping_address2,
-                'billing_city': saved_address.shipping_city,
-                'billing_state': saved_address.shipping_state,
-                'billing_zip_code': saved_address.shipping_zip_code,
-                'billing_country': saved_address.shipping_country,
-                'card_name': request.POST.get('card_name'),
-                'card_number': request.POST.get('card_number'),
-                'card_expiry': request.POST.get('card_expiry'),
-                'card_cvv': request.POST.get('card_cvv')
-            }
-        else:
-            # Store billing information in session
-            request.session['billing_info'] = {
-                'billing_full_name': request.POST.get('billing_full_name'),
-                'billing_email': request.POST.get('billing_email'),
-                'billing_address1': request.POST.get('billing_address1'),
-                'billing_address2': request.POST.get('billing_address2'),
-                'billing_city': request.POST.get('billing_city'),
-                'billing_state': request.POST.get('billing_state'),
-                'billing_zip_code': request.POST.get('billing_zip_code'),
-                'billing_country': request.POST.get('billing_country'),
-                'card_name': request.POST.get('card_name'),
-                'card_number': request.POST.get('card_number'),
-                'card_expiry': request.POST.get('card_expiry'),
-                'card_cvv': request.POST.get('card_cvv')
-            }
-        return redirect('payment:checkout')
+        print("Address choice:", address_choice)
+        
+        try:
+            if address_choice and address_choice != 'new':
+                saved_address = ShippingAddress.objects.get(id=address_choice)
+                # Store billing information in session
+                request.session['billing_info'] = {
+                    'billing_full_name': saved_address.shipping_full_name,
+                    'billing_email': request.user.email,
+                    'billing_address1': saved_address.shipping_address1,
+                    'billing_address2': saved_address.shipping_address2,
+                    'billing_city': saved_address.shipping_city,
+                    'billing_state': saved_address.shipping_state,
+                    'billing_zip_code': saved_address.shipping_zip_code,
+                    'billing_country': saved_address.shipping_country,
+                    'payment_method': payment_method
+                }
+                
+                if payment_method == 'card':
+                    request.session['billing_info'].update({
+                        'card_name': request.POST.get('card_name'),
+                        'card_number': request.POST.get('card_number'),
+                        'card_expiry': request.POST.get('card_expiry'),
+                        'card_cvv': request.POST.get('card_cvv')
+                    })
+            else:
+                # Validate required fields
+                required_fields = ['billing_full_name', 'billing_email', 'billing_address1', 
+                                 'billing_city', 'billing_country']
+                
+                missing_fields = [field for field in required_fields 
+                                if not request.POST.get(field)]
+                
+                if missing_fields:
+                    print("Missing required fields:", missing_fields)
+                    messages.error(request, f"Please fill in all required fields: {', '.join(missing_fields)}")
+                    return redirect('payment:billing_info')
+                
+                # Store billing information in session
+                request.session['billing_info'] = {
+                    'billing_full_name': request.POST.get('billing_full_name'),
+                    'billing_email': request.POST.get('billing_email'),
+                    'billing_address1': request.POST.get('billing_address1'),
+                    'billing_address2': request.POST.get('billing_address2'),
+                    'billing_city': request.POST.get('billing_city'),
+                    'billing_state': request.POST.get('billing_state'),
+                    'billing_zip_code': request.POST.get('billing_zip_code'),
+                    'billing_country': request.POST.get('billing_country'),
+                    'payment_method': payment_method
+                }
+                
+                if payment_method == 'card':
+                    # Validate card fields
+                    card_fields = ['card_name', 'card_number', 'card_expiry', 'card_cvv']
+                    missing_card_fields = [field for field in card_fields 
+                                        if not request.POST.get(field)]
+                    
+                    if missing_card_fields:
+                        print("Missing card fields:", missing_card_fields)
+                        messages.error(request, f"Please fill in all card details: {', '.join(missing_card_fields)}")
+                        return redirect('payment:billing_info')
+                    
+                    request.session['billing_info'].update({
+                        'card_name': request.POST.get('card_name'),
+                        'card_number': request.POST.get('card_number'),
+                        'card_expiry': request.POST.get('card_expiry'),
+                        'card_cvv': request.POST.get('card_cvv')
+                    })
+            
+            print("Successfully stored billing info in session")
+            return redirect('payment:checkout')
+            
+        except Exception as e:
+            print("Error processing billing info:", str(e))
+            messages.error(request, f"An error occurred: {str(e)}")
+            return redirect('payment:billing_info')
+    
+    print("Non-POST request to process_billing_info")
     return redirect('payment:billing_info')
 
 @login_required
@@ -230,62 +281,66 @@ def checkout(request):
 def process_payment(request):
     if request.method == 'POST':
         cart = Cart(request)
-        cart_items = cart.get_items()
-        billing_info = request.session.get('billing_info')
-        
-        if not cart_items or not billing_info:
+        if not cart.cart:
+            messages.error(request, "Your cart is empty")
             return redirect('store:home')
-            
-        # Create the order
-        user = request.user
-        total = cart.cart_total()
-        shipping = Decimal('50.00')
-        grand_total = total + shipping
         
-        # Create shipping address string
-        shipping_address = (
-            f"{billing_info['billing_address1']}\n"
-            f"{billing_info['billing_address2']}\n"
-            f"{billing_info['billing_city']}\n"
-            f"{billing_info['billing_state']}\n"
-            f"{billing_info['billing_zip_code']}\n"
-            f"{billing_info['billing_country']}"
-        )
+        billing_info = request.session.get('billing_info')
+        if not billing_info:
+            messages.error(request, "Billing information is missing")
+            return redirect('payment:billing_info')
         
-        # Create the order
-        create_order = Order.objects.create(
-            user=user,
+        # Calculate total amount
+        total_amount = Decimal('0.00')
+        for product_id, quantity in cart.cart.items():
+            product = get_object_or_404(Product, id=product_id)
+            total_amount += product.price * Decimal(str(quantity))
+        
+        # Create order
+        order = Order.objects.create(
+            user=request.user,
             full_name=billing_info['billing_full_name'],
             email=billing_info['billing_email'],
-            shipping_address=shipping_address,
-            amount_paid=grand_total
+            shipping_address=f"{billing_info['billing_address1']}\n{billing_info.get('billing_address2', '')}\n{billing_info['billing_city']}, {billing_info['billing_state']} {billing_info['billing_zip_code']}\n{billing_info['billing_country']}",
+            amount_paid=total_amount
         )
         
-        # Create order items and track purchases
-        for item in cart_items:
+        # Create order items
+        for product_id, quantity in cart.cart.items():
+            product = get_object_or_404(Product, id=product_id)
             OrderItem.objects.create(
-                product=item['product'],
-                quantity=item['quantity'],
-                user=user,
-                order=create_order,
-                price=item['price']
+                order=order,
+                product=product,
+                quantity=quantity,
+                price=product.price
             )
-            
-            # Track purchase
-            from recommender.views import track_interaction
-            track_interaction(request, item['product'].id, 'purchase')
         
-        # Clear the cart
-        request.session['session_key'] = {}
-        request.session.modified = True
+        # Save payment information if it's a card payment
+        if billing_info.get('payment_method') == 'card':
+            Payment.objects.create(
+                user=request.user,
+                order=order,
+                payment_method='card',
+                card_name=billing_info['card_name'],
+                card_number=billing_info['card_number'],
+                card_expiry=billing_info['card_expiry'],
+                card_cvv=billing_info['card_cvv']
+            )
+        else:
+            Payment.objects.create(
+                user=request.user,
+                order=order,
+                payment_method='cod'
+            )
         
-        # Clear billing info from session
+        # Clear the cart and billing info
+        cart.clear()
         if 'billing_info' in request.session:
             del request.session['billing_info']
         
         messages.success(request, "Order placed successfully!")
         return redirect('payment:success')
-        
+    
     return redirect('payment:checkout')
 
 @login_required

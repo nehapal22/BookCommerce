@@ -22,10 +22,17 @@ class ShippingForm(forms.ModelForm):
 
 class paymentForm(forms.ModelForm):
     
-    card_name = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Name'}), required=True)
-    card_number = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Number'}), required=True)
-    card_expiry = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Expiry'}), required=True)
-    card_cvv = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card CVV'}), required=True)
+    payment_method = forms.ChoiceField(
+        label="Payment Method",
+        choices=Payment.PAYMENT_METHOD_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        initial='card'
+    )
+    
+    card_name = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Name'}), required=False)
+    card_number = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Number'}), required=False)
+    card_expiry = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card Expiry'}), required=False)
+    card_cvv = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Card CVV'}), required=False)
     billing_address1 = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Billing Address1'}), required=True)
     billing_address2 = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Billing Address2'}), required=False)
     billing_city = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Billing City'}), required=True)
@@ -35,5 +42,16 @@ class paymentForm(forms.ModelForm):
     
     class Meta:
         model = Payment
-        fields = ['card_name', 'card_number', 'card_expiry', 'card_cvv']
-    
+        fields = ['payment_method', 'card_name', 'card_number', 'card_expiry', 'card_cvv']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        payment_method = cleaned_data.get('payment_method')
+        
+        if payment_method == 'card':
+            card_fields = ['card_name', 'card_number', 'card_expiry', 'card_cvv']
+            for field in card_fields:
+                if not cleaned_data.get(field):
+                    self.add_error(field, 'This field is required for card payment')
+        
+        return cleaned_data

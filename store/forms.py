@@ -9,11 +9,11 @@ class UserInfoForm(forms.ModelForm):
     address2 = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Address'}), required=False)
     city = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'City'}), required=False)
     state = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'State'}), required=False)
-    zip_code = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Zip Code'}), required=False)
+    zipcode = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Zip Code'}), required=False)
     country = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Country'}), required=False)
     class Meta:
         model = Profile
-        fields = ('phone', 'address1', 'address2', 'city', 'state', 'zip_code', 'country')
+        fields = ('phone', 'address1', 'address2', 'city', 'state', 'zipcode', 'country')
     
 
 class ChangePasswordForm(SetPasswordForm):

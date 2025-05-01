@@ -110,3 +110,15 @@ class OrderItem(models.Model):
     def get_total(self):
         total = self.product.price * self.quantity
         return total
+
+class ShippingAddress(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='store_shipping_address')
+    address1 = models.CharField(max_length=250, blank=True)
+    address2 = models.CharField(max_length=250, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    zipcode = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s shipping address"

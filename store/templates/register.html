@@ -24,8 +24,9 @@
             
             <div class="card shadow">
                 <div class="card-body p-5">
-                    <form method='POST' action='{% url 'store:register' %}'>
+                    <form method="POST" action="{% url 'store:register' %}">
                         {% csrf_token %}
+                        
                         {% if form.errors %}
                             <div class="alert alert-danger">
                                 <strong>Please correct the following errors:</strong>
@@ -52,7 +53,7 @@
                         {% endfor %}
                         
                         <div class="d-grid gap-2">
-                            <button type='submit' class='btn btn-primary btn-lg'>Register</button>
+                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
                         </div>
                     </form>
                     

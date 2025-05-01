@@ -64,7 +64,25 @@
                     <h4 class="mb-0">Billing Address</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'payment:process_billing_info' %}" id="billing-form">
+                    {% if messages %}
+                    <div class="alert alert-danger">
+                        {% for message in messages %}
+                            <p>{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <p>{{ field|title }}: {{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'payment:process_billing_info' %}" id="billing-form" novalidate>
                         {% csrf_token %}
                         
                         {% if saved_addresses %}
@@ -142,35 +160,52 @@
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
 
-            <!-- Payment Information -->
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Payment Information</h4>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        {{ payment_form.card_name }}
-                    </div>
-                    <div class="mb-4">
-                        {{ payment_form.card_number }}
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            {{ payment_form.card_expiry }}
+                        <!-- Payment Method Selection -->
+                        <div class="mb-4">
+                            <h5>Payment Method</h5>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="payment_method" id="card_payment" value="card" checked>
+                                <label class="form-check-label" for="card_payment">
+                                    Card Payment
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="payment_method" id="cod_payment" value="cod">
+                                <label class="form-check-label" for="cod_payment">
+                                    Cash on Delivery
+                                </label>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-4">
-                            {{ payment_form.card_cvv }}
+
+                        <!-- Card Details Section -->
+                        <div id="card_details_section">
+                            <h5 class="mb-3">Card Details</h5>
+                            <div class="mb-3">
+                                <label for="card_name" class="form-label">Name on Card</label>
+                                <input type="text" class="form-control" id="card_name" name="card_name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Card Number</label>
+                                <input type="text" class="form-control" id="card_number" name="card_number" maxlength="16">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_expiry" class="form-label">Expiry Date (MM/YY)</label>
+                                    <input type="text" class="form-control" id="card_expiry" name="card_expiry" maxlength="5">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="card_cvv" name="card_cvv" maxlength="3">
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" form="billing-form" class="btn btn-primary">Continue to Checkout</button>
-                        <a href="{% url 'cart:cart_summary' %}" class="btn btn-outline-secondary">Back to Cart</a>
-                    </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary" id="submit-button">Continue to Checkout</button>
+                            <a href="{% url 'cart:cart_summary' %}" class="btn btn-outline-secondary">Back to Cart</a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -181,8 +216,80 @@
 document.addEventListener('DOMContentLoaded', function() {
     const addressChoiceRadios = document.querySelectorAll('input[name="address_choice"]');
     const newAddressForm = document.getElementById('new_address_form');
-    const saveAddressCheckbox = document.getElementById('save_address');
-    
+    const cardDetailsSection = document.getElementById('card_details_section');
+    const paymentMethodRadios = document.querySelectorAll('input[name="payment_method"]');
+    const cardFields = document.querySelectorAll('#card_details_section input');
+    const form = document.getElementById('billing-form');
+    const submitButton = document.getElementById('submit-button');
+
+    // Form validation and submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        let isValid = true;
+        const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        
+        // Clear previous validation states
+        form.querySelectorAll('.is-invalid').forEach(field => {
+            field.classList.remove('is-invalid');
+        });
+        
+        // Validate required fields
+        const requiredFields = form.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+                console.log('Empty required field:', field.name);
+            }
+        });
+        
+        // Validate card fields if card payment is selected
+        if (selectedPaymentMethod === 'card') {
+            cardFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                    console.log('Empty card field:', field.name);
+                }
+            });
+            
+            // Validate card number format
+            const cardNumber = document.getElementById('card_number');
+            if (cardNumber.value.length !== 16) {
+                cardNumber.classList.add('is-invalid');
+                isValid = false;
+                console.log('Invalid card number length');
+            }
+            
+            // Validate expiry date format
+            const cardExpiry = document.getElementById('card_expiry');
+            if (!/^\d{2}\/\d{2}$/.test(cardExpiry.value)) {
+                cardExpiry.classList.add('is-invalid');
+                isValid = false;
+                console.log('Invalid expiry date format');
+            }
+            
+            // Validate CVV format
+            const cardCvv = document.getElementById('card_cvv');
+            if (!/^\d{3}$/.test(cardCvv.value)) {
+                cardCvv.classList.add('is-invalid');
+                isValid = false;
+                console.log('Invalid CVV format');
+            }
+        }
+        
+        if (isValid) {
+            console.log('Form is valid, submitting...');
+            submitButton.disabled = true;
+            form.submit();
+        } else {
+            console.log('Form validation failed');
+            alert('Please fill in all required fields correctly.');
+        }
+    });
+
+    // Handle address choice
     addressChoiceRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             if (this.value === 'new') {
@@ -190,16 +297,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 newAddressForm.querySelectorAll('input[required]').forEach(input => {
                     input.required = true;
                 });
-                saveAddressCheckbox.parentElement.style.display = 'block';
             } else {
                 newAddressForm.style.display = 'none';
                 newAddressForm.querySelectorAll('input[required]').forEach(input => {
                     input.required = false;
                 });
-                saveAddressCheckbox.parentElement.style.display = 'none';
             }
+        });
+    });
+
+    // Handle payment method choice
+    paymentMethodRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'card') {
+                cardDetailsSection.style.display = 'block';
+                cardFields.forEach(field => field.required = true);
+            } else {
+                cardDetailsSection.style.display = 'none';
+                cardFields.forEach(field => field.required = false);
+            }
+        });
+    });
+
+    // Format card expiry date (MM/YY)
+    const cardExpiry = document.getElementById('card_expiry');
+    cardExpiry.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 2) {
+            value = value.slice(0, 2) + '/' + value.slice(2);
+        }
+        e.target.value = value;
+    });
+
+    // Only allow numbers in card number and CVV
+    const numericInputs = document.querySelectorAll('#card_number, #card_cvv');
+    numericInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
         });
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

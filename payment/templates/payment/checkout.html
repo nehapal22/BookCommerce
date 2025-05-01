@@ -85,10 +85,17 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-4">
+                        <h5>Payment Method</h5>
+                        <p class="mb-3">{{ billing_info.payment_method|title }}</p>
+                        
+                        {% if billing_info.payment_method == 'card' %}
                         <h5>Card Details</h5>
-                        <p class="mb-1">Card Name: {{ payment_info.card_name }}</p>
-                        <p class="mb-1">Card Number: **** **** **** {{ payment_info.card_number|slice:"-4:" }}</p>
-                        <p class="mb-1">Expiry: {{ payment_info.card_expiry }}</p>
+                        <p class="mb-1">Card Name: {{ billing_info.card_name }}</p>
+                        <p class="mb-1">Card Number: **** **** **** {{ billing_info.card_number|slice:"-4:" }}</p>
+                        <p class="mb-1">Expiry: {{ billing_info.card_expiry }}</p>
+                        {% else %}
+                        <p class="mb-1">You have chosen to pay with Cash on Delivery</p>
+                        {% endif %}
                     </div>
                     
                     <div class="d-grid gap-2">
@@ -96,7 +103,7 @@
                             {% csrf_token %}
                             <button type="submit" class="btn btn-primary w-100">Place Order</button>
                         </form>
-                        <a href="{% url 'payment:billing_info' %}" class="btn btn-outline-secondary w-100">Edit Billing Information</a>
+                        <a href="{% url 'payment:billing_info' %}" class="btn btn-outline-secondary w-100">Edit Payment Information</a>
                     </div>
                 </div>
             </div>

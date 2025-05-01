@@ -126,3 +126,20 @@ class Cart:
             except Product.DoesNotExist:
                 continue
         return items
+
+    def clear(self):
+        """
+        Clear the cart by removing the session key
+        """
+        if 'session_key' in self.session:
+            del self.session['session_key']
+            self.session.modified = True
+            
+            # Clear the cart in user's profile if authenticated
+            if self.request.user.is_authenticated:
+                try:
+                    current_user = Profile.objects.get(user__id=self.request.user.id)
+                    current_user.old_cart = '{}'
+                    current_user.save()
+                except Profile.DoesNotExist:
+                    pass
