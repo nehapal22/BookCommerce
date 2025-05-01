@@ -1,8 +1,10 @@
 {% extends 'base.html'%}
-{% block content %}
+{% load static %}
+{% load store_extras %}
 
+{% block content %}
 <div class="container py-5">
-    <div class="card shadow">
+    <div class="card shadow mb-4">
         <div class="row g-0">
           <div class="col-md-5">
             <img src="{{product.image.url}}" 
@@ -12,6 +14,28 @@
           <div class="col-md-7">
             <div class="card-body p-4">
               <h2 class="card-title mb-3" style="color: var(--text-primary);">{{product.name}}</h2>
+              
+              <!-- Average Rating -->
+              {% if avg_rating %}
+              <div class="mb-3">
+                <div class="rating">
+                    <div class="stars d-flex align-items-center gap-1">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= avg_rating %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                                {% if forloop.counter|add:"-1" < avg_rating %}
+                                    <i class="bi bi-star-half text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-star text-warning"></i>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        <span class="text-muted ms-2">({{ avg_rating|floatformat:1 }} out of 5)</span>
+                    </div>
+                </div>
+              </div>
+              {% endif %}
               
               <div class="mb-4">
                 {% if product.is_sale %}
@@ -49,6 +73,96 @@
               </div>
             </div>
           </div>
+        </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0" style="color: var(--text-primary);">Customer Reviews</h3>
+                {% if request.user.is_authenticated and not user_review %}
+                    {% if request.user|has_purchased:product %}
+                        <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#reviewForm">
+                            <i class="bi bi-pencil me-2"></i>Write a Review
+                        </button>
+                    {% else %}
+                        <div class="text-muted">
+                            <i class="bi bi-info-circle me-2"></i>Purchase this product to write a review
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            {% if request.user.is_authenticated and not user_review and request.user|has_purchased:product %}
+            <div id="reviewForm" class="collapse mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="post" action="{% url 'store:add_review' product.id %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Your Rating (1-5)</label>
+                                <input type="number" name="rating" min="1" max="5" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Your Review</label>
+                                <textarea name="content" class="form-control" rows="5" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg me-2"></i>Submit Review
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="reviews-list">
+                {% for review in reviews %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1" style="color: var(--text-primary);">{{ review.user.username }}</h5>
+                                <p class="text-muted mb-2">
+                                    <small>{{ review.created_at|date:"F j, Y" }}</small>
+                                    {% if review.user|has_purchased:product %}
+                                        <span class="badge bg-success ms-2">
+                                            <i class="bi bi-check-circle me-1"></i>Verified Purchase
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="rating">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    {% else %}
+                                        <i class="bi bi-star text-warning"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="mb-2">{{ review.content }}</p>
+                        
+                        {% if review.user == request.user %}
+                        <div class="review-actions">
+                            <a href="{% url 'store:edit_review' review.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <a href="{% url 'store:delete_review' review.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this review?')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>No reviews yet. Be the first to review this product!
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 
@@ -108,23 +222,21 @@ $(document).on('click', '#add-cart', function(e) {
         type: 'POST',
         url: '{% url "cart:cart_add" %}',
         data: {
-            product_id: $(this).val(),
-            csrfmiddlewaretoken: '{{ csrf_token }}'
-        },
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'product_id': $(this).val(),
+            'csrfmiddlewaretoken': '{{ csrf_token }}',
+            'action': 'post'
         },
         success: function(json) {
-            if (json.success) {
-                // Update cart count in navbar
-                const cartQuantity = document.getElementById('cart_quantity');
-                if (cartQuantity) {
-                    cartQuantity.textContent = json.cart_items_count;
-                }
-            }
+            document.getElementById("cart-count").innerHTML = json.cart_count
+            Swal.fire({
+                title: 'Success!',
+                text: 'Item added to cart successfully',
+                icon: 'success',
+                confirmButtonColor: '#3a56ff'
+            })
         },
         error: function(xhr, errmsg, err) {
-            console.log('Error adding to cart:', errmsg);
+            console.log(xhr.status + ": " + xhr.responseText);
         }
     });
 });

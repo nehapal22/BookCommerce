@@ -19,4 +19,8 @@ urlpatterns = [
     path("category_summary/", views.category_summary, name='category_summary'),
     path("search/", views.search, name= 'search'),
 
+    path('product/<int:product_id>/', views.product_detail, name='product_detail'),
+    path('product/<int:product_id>/review/', views.add_review, name='add_review'),
+    path('review/<int:review_id>/edit/', views.edit_review, name='edit_review'),
+    path('review/<int:review_id>/delete/', views.delete_review, name='delete_review'),
 ]

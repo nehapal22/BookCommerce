@@ -3,6 +3,7 @@ import datetime
 from django.utils.text import slugify
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 #create customer profile
 class Profile(models.Model):
@@ -122,3 +123,21 @@ class ShippingAddress(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s shipping address"
+
+class BookReview(models.Model):
+    book = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField(verbose_name="Your Review", help_text="Share your thoughts about the book's content")
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Rating from 1 (poor) to 5 (excellent)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['book', 'user']  # Prevent duplicate reviews
+
+    def __str__(self):
+        return f"Review by {self.user.username} for {self.book.name}"

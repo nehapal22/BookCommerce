@@ -1,7 +1,7 @@
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, SetPasswordForm
 from django import forms
 from django.contrib.auth.models import User
-from .models import Profile
+from .models import Profile, BookReview
 
 class UserInfoForm(forms.ModelForm):
     phone = forms.CharField(label="", max_length=20, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Phone Number'}), required=False)
@@ -17,7 +17,7 @@ class UserInfoForm(forms.ModelForm):
     
 
 class ChangePasswordForm(SetPasswordForm):
-    class meta:
+    class Meta:
         model = User
         fields = ('password1', 'password2')
         
@@ -81,3 +81,23 @@ class SignUpForm(UserCreationForm):
 		self.fields['password2'].help_text = '<span class="form-text text-muted"><small>Enter the same password as before, for verification.</small></span>'
             
             
+class BookReviewForm(forms.ModelForm):
+    class Meta:
+        model = BookReview
+        fields = ['content', 'rating']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'rows': 5,
+                'placeholder': 'What did you think about the book\'s content?',
+                'class': 'form-control'
+            }),
+            'rating': forms.NumberInput(attrs={
+                'min': 1,
+                'max': 5,
+                'class': 'form-control rating-input'
+            })
+        }
+        labels = {
+            'content': 'Your Review',
+            'rating': 'Your Rating (1-5)'
+        }

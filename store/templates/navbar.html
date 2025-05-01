@@ -58,6 +58,18 @@
                         {% endfor %}
                     </ul>
                 </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle position-relative" id="reviewsDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Reviews
+                        <span class="position-absolute bottom-0 start-50 translate-middle-x bg-primary rounded" style="height: 2px; width: 0; transition: width 0.3s ease;"></span>
+                    </a>
+                    <ul class="dropdown-menu shadow-lg border-0 rounded-3" aria-labelledby="reviewsDropdown">
+                        <li><a class="dropdown-item py-2" href="{% url 'store:home' %}?show=my_reviews">My Reviews</a></li>
+                        <li><a class="dropdown-item py-2" href="{% url 'store:home' %}?show=all_reviews">All Reviews</a></li>
+                    </ul>
+                </li>
+                {% endif %}
             </ul>
             
             <div class="d-flex align-items-center">

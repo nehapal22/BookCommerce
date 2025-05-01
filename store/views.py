@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Product, Category, Profile
+from .models import Product, Category, Profile, BookReview
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
-from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm
-from payment.models import ShippingAddress
+from .forms import SignUpForm, UpdateUserForm, ChangePasswordForm, UserInfoForm, BookReviewForm
+from payment.models import ShippingAddress, OrderItem
 from payment.forms import ShippingForm
 from django import forms
 from django.http import JsonResponse, Http404
@@ -17,6 +17,8 @@ import json
 from recommender.recommender import Recommender
 from django.views.decorators.csrf import csrf_protect
 from django.shortcuts import render, redirect
+from django.db.models import Avg, Q
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +30,22 @@ def product(request, pk):
     try:
         product = get_object_or_404(Product, id=pk)
         
-        # Track product view if user is logged in
+        # Get reviews and average rating
+        reviews = BookReview.objects.filter(book=product).select_related('user').order_by('-created_at')
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+        
+        # Check if user has already reviewed and if they have purchased the product
+        user_review = None
+        has_purchased = False
         if request.user.is_authenticated:
+            user_review = BookReview.objects.filter(book=product, user=request.user).first()
+            has_purchased = OrderItem.objects.filter(
+                product=product,
+                user=request.user,
+                order__isnull=False  # Only count completed orders
+            ).exists()
+            
+            # Track product view
             from recommender.views import track_interaction
             track_interaction(request, pk, 'view')
         
@@ -37,17 +53,39 @@ def product(request, pk):
         recommender = Recommender()
         recommendations = recommender.get_content_based_recommendations(product, n=4)
         
-        return render(request, 'product.html', {
+        context = {
             'product': product,
             'categories': get_categories(),
-            'recommendations': recommendations
-        })
+            'recommendations': recommendations,
+            'reviews': reviews,
+            'avg_rating': avg_rating,
+            'user_review': user_review,
+            'has_purchased': has_purchased
+        }
+        
+        return render(request, 'product.html', context)
     except Http404:
         messages.error(request, 'Product not found')
         return redirect('store:home')
 
 def home(request):
     products = Product.objects.all()
+    show = request.GET.get('show', '')
+    
+    if show == 'my_reviews' and request.user.is_authenticated:
+        # Get user's reviews
+        reviews = BookReview.objects.filter(user=request.user).select_related('book', 'user').order_by('-created_at')
+        return render(request, 'store/my_reviews.html', {
+            'reviews': reviews,
+            'categories': get_categories()
+        })
+    elif show == 'all_reviews':
+        # Get all reviews
+        reviews = BookReview.objects.all().select_related('book', 'user').order_by('-created_at')
+        return render(request, 'store/all_reviews.html', {
+            'reviews': reviews,
+            'categories': get_categories()
+        })
     
     # Get personalized recommendations if user is logged in
     recommendations = None
@@ -75,7 +113,7 @@ def category_view(request, category_slug):
         })
     except Http404:
         messages.error(request, 'Category not found')
-        return redirect('category_summary')
+        return redirect('store:category_summary')
 
 def category_summary(request):
     return render(request, 'category_summary.html', {
@@ -166,7 +204,8 @@ def register_user(request):
     return render(request, 'register.html', {
         'form': form,
         'categories': get_categories()
-})
+    })
+
 @login_required
 def update_user(request):
     if request.user.is_authenticated:
@@ -276,3 +315,88 @@ def search(request):
         return render(request, "search.html", {
             'categories': get_categories()
         })
+
+@login_required
+def add_review(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    
+    # Check if user has purchased the product
+    has_purchased = OrderItem.objects.filter(
+        product=product,
+        user=request.user,
+        order__isnull=False  # Only count completed orders
+    ).exists()
+    
+    if not has_purchased:
+        messages.error(request, "You can only review products that you have purchased.")
+        return redirect('store:product', pk=product.id)
+    
+    # Check if user has already reviewed this product
+    existing_review = BookReview.objects.filter(book=product, user=request.user).first()
+    if existing_review:
+        messages.error(request, "You have already reviewed this product. You can edit your existing review instead.")
+        return redirect('store:product', pk=product.id)
+    
+    if request.method == 'POST':
+        form = BookReviewForm(request.POST)
+        if form.is_valid():
+            try:
+                review = form.save(commit=False)
+                review.book = product
+                review.user = request.user
+                review.save()
+                messages.success(request, "Your review has been added successfully!")
+                return redirect('store:product', pk=product.id)
+            except Exception as e:
+                messages.error(request, "There was an error saving your review. Please try again.")
+                return redirect('store:product', pk=product.id)
+    else:
+        form = BookReviewForm()
+    
+    return render(request, 'store/add_review.html', {
+        'form': form, 
+        'product': product,
+        'categories': get_categories()
+    })
+
+@login_required
+def edit_review(request, review_id):
+    review = get_object_or_404(BookReview, id=review_id, user=request.user)
+    
+    if request.method == 'POST':
+        form = BookReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your review has been updated successfully!")
+            return redirect('store:product_detail', product_id=review.book.id)
+    else:
+        form = BookReviewForm(instance=review)
+    
+    return render(request, 'store/edit_review.html', {'form': form, 'review': review})
+
+@login_required
+def delete_review(request, review_id):
+    review = get_object_or_404(BookReview, id=review_id, user=request.user)
+    product_id = review.book.id
+    review.delete()
+    messages.success(request, "Your review has been deleted successfully!")
+    return redirect('store:product_detail', product_id=product_id)
+
+def product_detail(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    reviews = product.reviews.all().select_related('user').order_by('-created_at')
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+    
+    # Check if user has already reviewed this product
+    user_review = None
+    if request.user.is_authenticated:
+        user_review = BookReview.objects.filter(book=product, user=request.user).first()
+    
+    context = {
+        'product': product,
+        'reviews': reviews,
+        'user_review': user_review,
+        'avg_rating': avg_rating,
+        'categories': get_categories()
+    }
+    return render(request, 'store/product_detail.html', context)
