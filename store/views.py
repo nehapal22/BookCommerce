@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Product, Category, Profile, BookReview
+from .models import Product, Category, Profile, BookReview, ReviewComment
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -31,19 +31,13 @@ def product(request, pk):
         product = get_object_or_404(Product, id=pk)
         
         # Get reviews and average rating
-        reviews = BookReview.objects.filter(book=product).select_related('user').order_by('-created_at')
+        reviews = BookReview.objects.filter(book=product).select_related('user').prefetch_related('comments__user').order_by('-created_at')
         avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
         
-        # Check if user has already reviewed and if they have purchased the product
+        # Check if user has already reviewed
         user_review = None
-        has_purchased = False
         if request.user.is_authenticated:
             user_review = BookReview.objects.filter(book=product, user=request.user).first()
-            has_purchased = OrderItem.objects.filter(
-                product=product,
-                user=request.user,
-                order__isnull=False  # Only count completed orders
-            ).exists()
             
             # Track product view
             from recommender.views import track_interaction
@@ -60,12 +54,12 @@ def product(request, pk):
             'reviews': reviews,
             'avg_rating': avg_rating,
             'user_review': user_review,
-            'has_purchased': has_purchased
+            'reading_status_choices': BookReview.READING_STATUS_CHOICES,
         }
-        
         return render(request, 'product.html', context)
-    except Http404:
-        messages.error(request, 'Product not found')
+    except Exception as e:
+        logger.error(f"Error in product view: {str(e)}")
+        messages.error(request, "Error loading product details")
         return redirect('store:home')
 
 def home(request):
@@ -320,44 +314,53 @@ def search(request):
 def add_review(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     
-    # Check if user has purchased the product
-    has_purchased = OrderItem.objects.filter(
-        product=product,
-        user=request.user,
-        order__isnull=False  # Only count completed orders
-    ).exists()
-    
-    if not has_purchased:
-        messages.error(request, "You can only review products that you have purchased.")
-        return redirect('store:product', pk=product.id)
-    
-    # Check if user has already reviewed this product
-    existing_review = BookReview.objects.filter(book=product, user=request.user).first()
-    if existing_review:
-        messages.error(request, "You have already reviewed this product. You can edit your existing review instead.")
-        return redirect('store:product', pk=product.id)
-    
     if request.method == 'POST':
-        form = BookReviewForm(request.POST)
-        if form.is_valid():
-            try:
-                review = form.save(commit=False)
-                review.book = product
-                review.user = request.user
-                review.save()
-                messages.success(request, "Your review has been added successfully!")
-                return redirect('store:product', pk=product.id)
-            except Exception as e:
-                messages.error(request, "There was an error saving your review. Please try again.")
-                return redirect('store:product', pk=product.id)
-    else:
-        form = BookReviewForm()
-    
-    return render(request, 'store/add_review.html', {
-        'form': form, 
-        'product': product,
-        'categories': get_categories()
-    })
+        try:
+            # Check if user already reviewed this product
+            existing_review = BookReview.objects.filter(book=product, user=request.user).first()
+            if existing_review:
+                messages.error(request, "You have already reviewed this product")
+                return redirect('store:product', pk=product_id)
+            
+            # Get form data
+            content = request.POST.get('content')
+            reading_status = request.POST.get('reading_status', 'read')
+            rating = request.POST.get('rating')
+            
+            # Validate content
+            if not content:
+                messages.error(request, "Review content is required")
+                return redirect('store:product', pk=product_id)
+            
+            # Handle rating based on reading status
+            if reading_status == 'want_to_read':
+                rating = 0  # Set rating to 0 for want_to_read
+            else:
+                try:
+                    rating = int(rating)
+                    if not (1 <= rating <= 5):
+                        messages.error(request, "Rating must be between 1 and 5")
+                        return redirect('store:product', pk=product_id)
+                except (TypeError, ValueError):
+                    messages.error(request, "Valid rating is required for this reading status")
+                    return redirect('store:product', pk=product_id)
+            
+            # Create review
+            review = BookReview.objects.create(
+                book=product,
+                user=request.user,
+                rating=rating,
+                content=content,
+                reading_status=reading_status
+            )
+            
+            messages.success(request, "Review added successfully!")
+            
+        except Exception as e:
+            logger.error(f"Error adding review: {str(e)}")
+            messages.error(request, f"Error adding review: {str(e)}")
+            
+    return redirect('store:product', pk=product_id)
 
 @login_required
 def edit_review(request, review_id):
@@ -400,3 +403,48 @@ def product_detail(request, product_id):
         'categories': get_categories()
     }
     return render(request, 'store/product_detail.html', context)
+
+@login_required
+def add_comment(request, review_id):
+    review = get_object_or_404(BookReview, id=review_id)
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            comment = ReviewComment.objects.create(
+                review=review,
+                user=request.user,
+                content=content
+            )
+            messages.success(request, "Comment added successfully!")
+            return redirect('store:product', pk=review.book.id)
+        else:
+            messages.error(request, "Comment cannot be empty")
+    return redirect('store:product', pk=review.book.id)
+
+@login_required
+def edit_comment(request, comment_id):
+    comment = get_object_or_404(ReviewComment, id=comment_id)
+    if request.user != comment.user:
+        messages.error(request, "You can only edit your own comments")
+        return redirect('store:product', pk=comment.review.book.id)
+    
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            comment.content = content
+            comment.save()
+            messages.success(request, "Comment updated successfully!")
+        else:
+            messages.error(request, "Comment cannot be empty")
+    return redirect('store:product', pk=comment.review.book.id)
+
+@login_required
+def delete_comment(request, comment_id):
+    comment = get_object_or_404(ReviewComment, id=comment_id)
+    if request.user != comment.user:
+        messages.error(request, "You can only delete your own comments")
+        return redirect('store:product', pk=comment.review.book.id)
+    
+    comment.delete()
+    messages.success(request, "Comment deleted successfully!")
+    return redirect('store:product', pk=comment.review.book.id)

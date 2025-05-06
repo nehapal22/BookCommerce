@@ -10,16 +10,16 @@ from django.contrib import messages
 
 @login_required
 def payment_success(request):
-    if request.method == 'POST':
-        #get billing from last page
-        payment_form = paymentForm(request.POST or None)
-        #get shipping from last page
-        my_shipping = request.session.get('my_shipping')
-        print(my_shipping)
+    # Check if there's an order in the session
+    billing_info = request.session.get('billing_info')
+    if billing_info:
         messages.success(request, "Payment successful")
-        return redirect('home')
+        # Clear billing info from session
+        if 'billing_info' in request.session:
+            del request.session['billing_info']
+        return redirect('store:home')
     else:
-        messages.error(request, "Payment denied")
+        messages.error(request, "No order information found")
         return redirect('payment:checkout')
 
 @login_required

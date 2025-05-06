@@ -49,9 +49,12 @@ class paymentForm(forms.ModelForm):
         payment_method = cleaned_data.get('payment_method')
         
         if payment_method == 'card':
-            card_fields = ['card_name', 'card_number', 'card_expiry', 'card_cvv']
-            for field in card_fields:
-                if not cleaned_data.get(field):
-                    self.add_error(field, 'This field is required for card payment')
-        
+            card_name = cleaned_data.get('card_name')
+            card_number = cleaned_data.get('card_number')
+            card_expiry = cleaned_data.get('card_expiry')
+            card_cvv = cleaned_data.get('card_cvv')
+            
+            if not all([card_name, card_number, card_expiry, card_cvv]):
+                raise forms.ValidationError("All card details are required for card payment")
+        # For COD, we don't need to validate card details
         return cleaned_data

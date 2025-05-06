@@ -125,19 +125,45 @@ class ShippingAddress(models.Model):
         return f"{self.user.username}'s shipping address"
 
 class BookReview(models.Model):
+    READING_STATUS_CHOICES = [
+        ('read', 'Read'),
+        ('want_to_read', 'Want to Read'),
+        ('currently_reading', 'Currently Reading'),
+        ('dnf', 'Did Not Finish')
+    ]
+    
     book = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(verbose_name="Your Review", help_text="Share your thoughts about the book's content")
     rating = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)],
-        help_text="Rating from 1 (poor) to 5 (excellent)"
+            validators=[MinValueValidator(1), MaxValueValidator(5)],
+            help_text="Rating from 1 (poor) to 5 (excellent)"
+        )
+    reading_status = models.CharField(
+        max_length=20,
+        choices=READING_STATUS_CHOICES,
+        default='read',
+        verbose_name="Reading Status"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         ordering = ['-created_at']
-        unique_together = ['book', 'user']  # Prevent duplicate reviews
-
+        unique_together = ['book', 'user']
+    
     def __str__(self):
-        return f"Review by {self.user.username} for {self.book.name}"
+        return f"{self.user.username}'s review of {self.book.name}"
+
+class ReviewComment(models.Model):
+    review = models.ForeignKey(BookReview, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField(verbose_name="Your Comment", help_text="Share your thoughts about this review")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"Comment by {self.user.username} on {self.review.user.username}'s review"

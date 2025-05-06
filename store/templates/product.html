@@ -82,25 +82,27 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="mb-0" style="color: var(--text-primary);">Customer Reviews</h3>
                 {% if request.user.is_authenticated and not user_review %}
-                    {% if request.user|has_purchased:product %}
-                        <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#reviewForm">
-                            <i class="bi bi-pencil me-2"></i>Write a Review
-                        </button>
-                    {% else %}
-                        <div class="text-muted">
-                            <i class="bi bi-info-circle me-2"></i>Purchase this product to write a review
-                        </div>
-                    {% endif %}
+                <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#reviewForm">
+                    <i class="bi bi-pencil me-2"></i>Write a Review
+                </button>
                 {% endif %}
             </div>
             
-            {% if request.user.is_authenticated and not user_review and request.user|has_purchased:product %}
+            {% if request.user.is_authenticated and not user_review %}
             <div id="reviewForm" class="collapse mb-4">
                 <div class="card">
                     <div class="card-body">
                         <form method="post" action="{% url 'store:add_review' product.id %}">
                             {% csrf_token %}
                             <div class="mb-3">
+                                <label class="form-label">Reading Status</label>
+                                <select name="reading_status" class="form-select" required onchange="handleReadingStatusChange(this)">
+                                    {% for value, label in reading_status_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3" id="ratingSection">
                                 <label class="form-label">Your Rating (1-5)</label>
                                 <input type="number" name="rating" min="1" max="5" class="form-control" required>
                             </div>
@@ -126,13 +128,21 @@
                                 <h5 class="mb-1" style="color: var(--text-primary);">{{ review.user.username }}</h5>
                                 <p class="text-muted mb-2">
                                     <small>{{ review.created_at|date:"F j, Y" }}</small>
-                                    {% if review.user|has_purchased:product %}
-                                        <span class="badge bg-success ms-2">
-                                            <i class="bi bi-check-circle me-1"></i>Verified Purchase
-                                        </span>
-                                    {% endif %}
+                                    <span class="badge {% if review.reading_status == 'read' %}bg-success{% elif review.reading_status == 'want_to_read' %}bg-info{% elif review.reading_status == 'currently_reading' %}bg-primary{% else %}bg-warning{% endif %} ms-2">
+                                        {% if review.reading_status == 'read' %}
+                                            <i class="bi bi-book-fill me-1"></i>
+                                        {% elif review.reading_status == 'want_to_read' %}
+                                            <i class="bi bi-bookmark-plus me-1"></i>
+                                        {% elif review.reading_status == 'currently_reading' %}
+                                            <i class="bi bi-book-half me-1"></i>
+                                        {% else %}
+                                            <i class="bi bi-book-x me-1"></i>
+                                        {% endif %}
+                                        {{ review.get_reading_status_display }}
+                                    </span>
                                 </p>
                             </div>
+                            {% if review.reading_status != 'want_to_read' %}
                             <div class="rating">
                                 {% for i in "12345" %}
                                     {% if forloop.counter <= review.rating %}
@@ -142,11 +152,12 @@
                                     {% endif %}
                                 {% endfor %}
                             </div>
+                            {% endif %}
                         </div>
                         <p class="mb-2">{{ review.content }}</p>
                         
                         {% if review.user == request.user %}
-                        <div class="review-actions">
+                        <div class="review-actions mb-3">
                             <a href="{% url 'store:edit_review' review.id %}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil me-1"></i>Edit
                             </a>
@@ -155,6 +166,60 @@
                             </a>
                         </div>
                         {% endif %}
+
+                        <!-- Comments Section -->
+                        <div class="comments-section mt-3">
+                            <hr>
+                            <h6 class="mb-3" style="color: var(--text-primary);">
+                                <i class="bi bi-chat-dots me-2"></i>Comments
+                            </h6>
+                            
+                            {% if review.comments.all %}
+                            <div class="comments-list">
+                                {% for comment in review.comments.all %}
+                                <div class="comment mb-3 ps-4 border-start">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1" style="color: var(--text-primary);">{{ comment.user.username }}</h6>
+                                            <small class="text-muted">{{ comment.created_at|date:"F j, Y" }}</small>
+                                        </div>
+                                        {% if comment.user == request.user %}
+                                        <div class="comment-actions">
+                                            <button class="btn btn-sm btn-link text-primary" onclick="editComment('{{ comment.id }}', '{{ comment.content|escapejs }}')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <a href="{% url 'store:delete_comment' comment.id %}" class="btn btn-sm btn-link text-danger" onclick="return confirm('Delete this comment?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-0 mt-2" id="comment-content-{{ comment.id }}">{{ comment.content }}</p>
+                                    <form method="post" action="{% url 'store:edit_comment' comment.id %}" class="d-none mt-2" id="edit-comment-form-{{ comment.id }}">
+                                        {% csrf_token %}
+                                        <div class="input-group">
+                                            <textarea name="content" class="form-control form-control-sm" rows="2" required></textarea>
+                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelEdit('{{ comment.id }}')">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if request.user.is_authenticated %}
+                            <form method="post" action="{% url 'store:add_comment' review.id %}" class="mt-3">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    <textarea name="content" class="form-control" rows="1" placeholder="Add a comment..." required></textarea>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send"></i>
+                                    </button>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% empty %}
@@ -216,6 +281,34 @@
 
 {% if user.is_authenticated %}
 <script>
+function handleReadingStatusChange(selectElement) {
+    const ratingSection = document.getElementById('ratingSection');
+    const ratingInput = ratingSection.querySelector('input[name="rating"]');
+    
+    if (selectElement.value === 'want_to_read') {
+        ratingSection.style.display = 'none';
+        ratingInput.removeAttribute('required');
+        ratingInput.value = '';  // Clear the rating
+    } else {
+        ratingSection.style.display = 'block';
+        ratingInput.setAttribute('required', 'required');
+    }
+}
+
+function editComment(commentId, content) {
+    // Hide content and show edit form
+    document.getElementById(`comment-content-${commentId}`).style.display = 'none';
+    const form = document.getElementById(`edit-comment-form-${commentId}`);
+    form.classList.remove('d-none');
+    form.querySelector('textarea').value = content;
+}
+
+function cancelEdit(commentId) {
+    // Show content and hide edit form
+    document.getElementById(`comment-content-${commentId}`).style.display = 'block';
+    document.getElementById(`edit-comment-form-${commentId}`).classList.add('d-none');
+}
+
 $(document).on('click', '#add-cart', function(e) {
     e.preventDefault();
     $.ajax({
