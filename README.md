@@ -92,11 +92,6 @@ BookBay is a ecommerce platform built with Django, designed for online book sell
 
 ## Development
 
-### Running Tests
-```
-python manage.py test
-```
-
 ### Creating New Apps
 ```
 python manage.py startapp app_name
