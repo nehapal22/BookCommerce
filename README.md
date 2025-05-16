@@ -86,12 +86,9 @@ BookBay is a ecommerce platform built with Django, designed for online book sell
 
 1. Access the admin panel at `/admin` to manage products, orders, and users
 2. Browse the product catalog on the homepage
-   ![Homepage](screenshots/home.png)
 3. Add items to your cart and proceed to checkout
-   ![Shopping Cart](screenshots/cart.png)
 4. Complete the payment process
 5. View your order history in your profile
-   ![Order History](screenshots/orders.png)
 
 ## Development
 
