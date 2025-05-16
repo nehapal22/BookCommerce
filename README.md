@@ -18,8 +18,7 @@ BookBay is a ecommerce platform built with Django, designed for online book sell
 - **Review System**: Add reviews and ratings for books
   ![Book Reviews](screenshots/reviews.png)
 - **Payment Processing**: Secure payment processing
-- **User Profile**: Manage your profile and order history
-  ![Update Profile](screenshots/update_profile.png)
+- **User Profile**: Manage your profile and order history 
 
 ## Technology Stack
 
@@ -105,10 +104,6 @@ python manage.py test
 ```
 python manage.py startapp app_name
 ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contributors
 
